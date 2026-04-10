@@ -30,6 +30,25 @@ if ($isNewEnvironment) {
 
 $fileDate = Get-Date -Format "yyyy-MM-dd"
 $fileName = "$scriptDir\Reports\Users-$hostnameCustomer-$fileDate.csv"
+$healthCheckHostName = 'hc.desktops2go.net'
+$healthCheckUrl = "https://$healthCheckHostName/ping/desktops2go/d2g-users-$emailCustomer"
+$hostsFilePath = 'C:\Windows\System32\drivers\etc\hosts'
+
+try {
+	$healthCheckIpAddress = Resolve-DnsName -Name $healthCheckHostName -Server '8.8.8.8' -Type A -ErrorAction Stop |
+		Select-Object -ExpandProperty IPAddress -First 1
+	$hostsFileLines = if (Test-Path $hostsFilePath) { Get-Content -Path $hostsFilePath } else { @() }
+	$existingHealthCheckEntry = $hostsFileLines | Where-Object { $_ -match "^\s*$([regex]::Escape($healthCheckIpAddress))\s+$([regex]::Escape($healthCheckHostName))(\s+.*)?$" }
+
+	if (-not $existingHealthCheckEntry) {
+		$updatedHostsFileLines = $hostsFileLines | Where-Object { $_ -notmatch "(?i)(^|\s)$([regex]::Escape($healthCheckHostName))(\s|$)" }
+		$updatedHostsFileLines += "$healthCheckIpAddress`t$healthCheckHostName"
+		Set-Content -Path $hostsFilePath -Value $updatedHostsFileLines
+	}
+}
+catch {
+	Write-Warning "Unable to update hosts file entry for ${healthCheckHostName}: $($_.Exception.Message)"
+}
 
 if ($debug -ne $true -and (Test-Path c:\ISTools\DemoAudit.ps1)) {
 	#This calls the demo audit script, which disables inactive demo accounts.
@@ -140,8 +159,24 @@ if ($debug -eq $true) {
 	$recipients = @("dabrames@nettek.com")
 }
 
+$allEmailsSent = $true
 foreach ($recipient in $recipients) {
 	Write-Progress -Status "Sending Email to $recipient" -Activity "Finishing Up" -PercentComplete -1
-	Send-MailMessage -Attachments $fileName -From Administrator@nettek.com -SmtpServer $mailServer -To $recipient -Subject "Desktops2Go Users - $emailCustomer"
+	try {
+		Send-MailMessage -Attachments $fileName -From Administrator@nettek.com -SmtpServer $mailServer -To $recipient -Subject "Desktops2Go Users - $emailCustomer" -ErrorAction Stop
+	}
+	catch {
+		$allEmailsSent = $false
+		Write-Error "Failed to send email to $recipient via ${mailServer}: $($_.Exception.Message)"
+	}
 	Start-Sleep -Seconds 2
+}
+
+if ($allEmailsSent) {
+	try {
+		Invoke-RestMethod -Uri $healthCheckUrl -Method Get -ErrorAction Stop | Out-Null
+	}
+	catch {
+		Write-Error "Failed to invoke health check URL ${healthCheckUrl}: $($_.Exception.Message)"
+	}
 }
