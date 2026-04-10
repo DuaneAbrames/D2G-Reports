@@ -50,6 +50,32 @@ catch {
 	Write-Warning "Unable to update hosts file entry for ${healthCheckHostName}: $($_.Exception.Message)"
 }
 
+function Get-OldEnvironmentOuInfo {
+	param(
+		[string]$DistinguishedName
+	)
+
+	$distinguishedNameParts = $DistinguishedName -split '(?<!\\),'
+	$organizationalUnits = @(
+		$distinguishedNameParts |
+		Where-Object { $_ -like 'OU=*' } |
+		ForEach-Object { $_.Substring(3).Replace('\,', ',').Replace('\\', '\') }
+	)
+	$customersIndex = [Array]::IndexOf($organizationalUnits, 'Customers')
+
+	if ($customersIndex -le 0) {
+		return [PSCustomObject]@{
+			Company = $hostnameCustomer
+			Subfolder = ''
+		}
+	}
+
+	return [PSCustomObject]@{
+		Company = $organizationalUnits[$customersIndex - 1]
+		Subfolder = if ($customersIndex -ge 2) { $organizationalUnits[0] } else { '' }
+	}
+}
+
 if ($debug -ne $true -and (Test-Path c:\ISTools\DemoAudit.ps1)) {
 	#This calls the demo audit script, which disables inactive demo accounts.
 	Write-Progress -Status "Checking for inactive demo accounts" -Activity "Preliminary Checks" -PercentComplete -1
@@ -88,15 +114,9 @@ foreach ($user in $users) {
 			$companyName = $hostnameCustomer
 			$subfolderName = ''
 		} else {
-			$companyName = $hostnameCustomer
-			$subfolderName = ''
-			if ($user.DistinguishedName -match '^CN=.*?,OU=([^,]+),OU=customers,') {
-				$companyName = $Matches[1]
-			}
-			if ($user.DistinguishedName -match '^CN=.*?,OU=([^,]+),(?:OU=[^,]+,)*OU=([^,]+),OU=customers,') {
-				$subfolderName = $Matches[1]
-				$companyName = $Matches[2]
-			}
+			$ouInfo = Get-OldEnvironmentOuInfo -DistinguishedName $user.DistinguishedName
+			$companyName = $ouInfo.Company
+			$subfolderName = $ouInfo.Subfolder
 		}
 
 		Write-Progress -Status $user.Name -Activity "$emailCustomer " -PercentComplete -1
