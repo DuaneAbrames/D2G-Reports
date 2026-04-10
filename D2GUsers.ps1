@@ -7,15 +7,29 @@ if (-not (Test-Path "$scriptDir\Reports")) {
 	New-Item -ItemType Directory -Path "$scriptDir\Reports" | Out-Null
 }
 
-$domain = $((Get-ADDomain).Name)
+$adDomain = Get-ADDomain
+$domain = $adDomain.Name
+$domainDistinguishedName = $adDomain.DistinguishedName
 
-$customer = (Hostname).Split('-')[0]
-if ($customer -like "template") {
+$hostnameCustomer = (Hostname).Split('-')[0]
+if ($hostnameCustomer -like "template") {
 	Exit
 }
 
+$ipv4Addresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+	Select-Object -ExpandProperty IPAddress
+$isNewEnvironment = $ipv4Addresses | Where-Object { $_ -match '^10\.24\.' } | Select-Object -First 1
+
+if ($isNewEnvironment) {
+	$userSearchBase = "OU=User Accounts,$domainDistinguishedName"
+	$emailCustomer = $hostnameCustomer
+} else {
+	$userSearchBase = "OU=customers,$domainDistinguishedName"
+	$emailCustomer = $domain
+}
+
 $fileDate = Get-Date -Format "yyyy-MM-dd"
-$fileName = "$scriptDir\Reports\Users-$customer-$fileDate.csv"
+$fileName = "$scriptDir\Reports\Users-$hostnameCustomer-$fileDate.csv"
 
 if ($debug -ne $true -and (Test-Path c:\ISTools\DemoAudit.ps1)) {
 	#This calls the demo audit script, which disables inactive demo accounts.
@@ -29,7 +43,7 @@ if ($debug -ne $true -and (Test-Path c:\ISTools\DemoAudit.ps1)) {
 $groupIndex = 0
 $spla = @()
 $splaIndex = @{}
-$groups = Get-ADGroup -SearchBase "ou=Licensing Security Groups,$((Get-ADDomain).DistinguishedName)" -Filter *
+$groups = Get-ADGroup -SearchBase "OU=Licensing Security Groups,$domainDistinguishedName" -Filter *
 $splaGroupNames = @()
 foreach ($group in $groups) {
 	$splaGroupNames += $group.Name
@@ -45,17 +59,17 @@ $splaGroups = $splaGroupNames | Sort-Object -Unique
 $admins = Get-ADGroupMember 'Domain Admins' | Select-Object -ExpandProperty DistinguishedName
 Write-Progress -Status "Please Wait..." -Activity "Gathering the list of users" -PercentComplete -1
 $output = @()
-$users = Get-ADUser -Properties DisplayName, Company, Department, DistinguishedName -Filter { Enabled -eq $true } | Sort-Object Company, DisplayName
+$users = Get-ADUser -SearchBase $userSearchBase -Properties DisplayName, Company, Department, DistinguishedName -Filter { Enabled -eq $true } | Sort-Object Company, DisplayName
 foreach ($user in $users) {
 
 	if ($admins -contains ($user.DistinguishedName)) {
 		#Skiping Domain Admin.
 	} else {
-		Write-Progress -Status $user.Name -Activity "$customer " -PercentComplete -1
+		Write-Progress -Status $user.Name -Activity "$emailCustomer " -PercentComplete -1
 		$userReport = New-Object PSObject
 		$userReport | Add-Member -Type NoteProperty -Name "Domain" -Value $domain
 		$userReport | Add-Member -Type NoteProperty -Name "Name" -Value $user.DisplayName
-		$userReport | Add-Member -Type NoteProperty -Name "Company" -Value $customer
+		$userReport | Add-Member -Type NoteProperty -Name "Company" -Value $hostnameCustomer
 		$userReport | Add-Member -Type NoteProperty -Name "Type" -Value ''
 		$userReport | Add-Member -Type NoteProperty -Name "Notes" -Value ''
 		foreach ($splaGroupName in $splaGroups) {
@@ -65,7 +79,7 @@ foreach ($user in $users) {
 		$demoTestOrService = 0
 		$office = 0
 		$desktop = 0
-		Write-Progress -Status "$($user.Name) ." -Activity "$customer " -PercentComplete -1
+		Write-Progress -Status "$($user.Name) ." -Activity "$emailCustomer " -PercentComplete -1
 		foreach ($splaIndexEntry in $splaIndex.GetEnumerator()) {
 			$shortName = $splaIndexEntry.Name
 			if (($spla[$splaIndexEntry.Value]) -contains $user.DistinguishedName) {
@@ -107,7 +121,7 @@ foreach ($user in $users) {
 			$userReport.Notes += "Full Desktop Account has No Office."
 		}
 
-		Write-Progress -Status "$($user.Name) .." -Activity "$customer " -PercentComplete -1
+		Write-Progress -Status "$($user.Name) .." -Activity "$emailCustomer " -PercentComplete -1
 		$output += $userReport
 	}
 }
@@ -128,6 +142,6 @@ if ($debug -eq $true) {
 
 foreach ($recipient in $recipients) {
 	Write-Progress -Status "Sending Email to $recipient" -Activity "Finishing Up" -PercentComplete -1
-	Send-MailMessage -Attachments $fileName -From Administrator@nettek.com -SmtpServer $mailServer -To $recipient -Subject "Desktops2Go Users - $customer"
+	Send-MailMessage -Attachments $fileName -From Administrator@nettek.com -SmtpServer $mailServer -To $recipient -Subject "Desktops2Go Users - $emailCustomer"
 	Start-Sleep -Seconds 2
 }
