@@ -17,10 +17,10 @@ if ($customer -like "template") {
 $fileDate = Get-Date -Format "yyyy-MM-dd"
 $fileName = "$scriptDir\Reports\Users-$customer-$fileDate.csv"
 
-if ($debug -ne $true -and (Test-Path C:\istools\demoaudit.ps1)) {
+if ($debug -ne $true -and (Test-Path c:\ISTools\DemoAudit.ps1)) {
 	#This calls the demo audit script, which disables inactive demo accounts.
 	Write-Progress -Status "Checking for inactive demo accounts" -Activity "Preliminary Checks" -PercentComplete -1
-	& C:\istools\demoaudit.ps1
+	& c:\ISTools\DemoAudit.ps1
 	Start-Sleep -Seconds 5
 }
 
@@ -47,7 +47,7 @@ Write-Progress -Status "Please Wait..." -Activity "Gathering the list of users" 
 $output = @()
 $users = Get-ADUser -Properties DisplayName, Company, Department, DistinguishedName -Filter { Enabled -eq $true } | Sort-Object Company, DisplayName
 foreach ($user in $users) {
-	
+
 	if ($admins -contains ($user.DistinguishedName)) {
 		#Skiping Domain Admin.
 	} else {
@@ -70,12 +70,12 @@ foreach ($user in $users) {
 			$shortName = $splaIndexEntry.Name
 			if (($spla[$splaIndexEntry.Value]) -contains $user.DistinguishedName) {
 				$userReport.($shortName) = 1
-				if ($shortName -like "ServiceLevel*") 
+				if ($shortName -like "ServiceLevel*")
 				{
 					$userReport.Type += $shortName.Replace('ServiceLevel - ', '')
 					$serviceLevels++
 				}
-				if ($shortName -like "SPLA - Office*") 
+				if ($shortName -like "SPLA - Office*")
 				{
 					$office++
 				}
@@ -106,7 +106,7 @@ foreach ($user in $users) {
 		if ($desktop -gt 0 -and $office -lt 1) {
 			$userReport.Notes += "Full Desktop Account has No Office."
 		}
-		
+
 		Write-Progress -Status "$($user.Name) .." -Activity "$customer " -PercentComplete -1
 		$output += $userReport
 	}
