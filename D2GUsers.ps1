@@ -118,7 +118,7 @@ Write-Progress -Status "Writing CSV Report" -Activity "Finishing Up" -PercentCom
 $output | Export-Csv $fileName -NoTypeInformation
 
 
-$mailServer = (Resolve-DnsName -Type MX nettek.com).NameExchange
+$mailServer = (Resolve-DnsName -Type MX nettek.com).NameExchange | Sort-Object | Select-Object -First 1
 
 $recipients = @("purchasing@nettek.com", "dabrames@nettek.com", "jalmeter@nettek.com")
 Start-Sleep -Seconds 3
