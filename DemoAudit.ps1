@@ -12,7 +12,7 @@ $searchBase = "ou=customers,$((Get-ADDomain).DistinguishedName)"
 
 $disableDays = 31
 $warningDays = 30
-$demoUsers = Get-ADGroupMember 'ServiceLevel - Demo Account' -Recursive | Get-ADUser
+$demoUsers = @(Get-ADGroupMember 'ServiceLevel - Demo Account' -Recursive | Get-ADUser)
 $demoUsers += Get-ADUser -SearchBase $searchBase -Properties DisplayName, Company, Department, LastLogonTimestamp, WhenCreated -Filter { Enabled -eq $true } | Where-Object { ($_.Company -like "Demo*") -or ($_.DisplayName -like "*demo*") }
 foreach ($demoUser in $demoUsers) {
 	if ($null -eq $demoUser.LastLogonTimestamp)
