@@ -86,10 +86,13 @@ foreach ($user in $users) {
 	} else {
 		if ($isNewEnvironment) {
 			$companyName = $hostnameCustomer
+			$subfolderName = ''
 		} else {
 			$companyName = $hostnameCustomer
-			if ($user.DistinguishedName -match '^CN=.*?,OU=([^,]+),') {
-				$companyName = $Matches[1]
+			$subfolderName = ''
+			if ($user.DistinguishedName -match '^CN=.*?,OU=([^,]+),(?:OU=[^,]+,)*OU=([^,]+),OU=customers,') {
+				$subfolderName = $Matches[1]
+				$companyName = $Matches[2]
 			}
 		}
 
@@ -98,6 +101,7 @@ foreach ($user in $users) {
 		$userReport | Add-Member -Type NoteProperty -Name "Domain" -Value $domain
 		$userReport | Add-Member -Type NoteProperty -Name "Name" -Value $user.DisplayName
 		$userReport | Add-Member -Type NoteProperty -Name "Company" -Value $companyName
+		$userReport | Add-Member -Type NoteProperty -Name "Subfolder" -Value $subfolderName
 		$userReport | Add-Member -Type NoteProperty -Name "Type" -Value ''
 		$userReport | Add-Member -Type NoteProperty -Name "Notes" -Value ''
 		foreach ($splaGroupName in $splaGroups) {
