@@ -31,7 +31,7 @@ if ($isNewEnvironment) {
 $fileDate = Get-Date -Format "yyyy-MM-dd"
 $fileName = "$scriptDir\Reports\Users-$hostnameCustomer-$fileDate.csv"
 $healthCheckHostName = 'hc.desktops2go.net'
-$healthCheckUrl = "https://$healthCheckHostName/ping/desktops2go/d2g-users-$emailCustomer"
+$healthCheckUrl = "https://$healthCheckHostName/ping/desktops2go/d2g-users-$($emailCustomer.ToLower())"
 $hostsFilePath = 'C:\Windows\System32\drivers\etc\hosts'
 
 try {

@@ -10,7 +10,7 @@ if (Test-Path "C:\ISTools\D2GUsers.ps1") {
         $fileName = Join-path "C:\ISTools" (Split-Path -Path $file -Leaf)
         Invoke-WebRequest -Uri $file -OutFile $fileName
     }
-    $schTask = (Get-ScheduledTask | ? taskname -like "*d2g*user*").taskname
+    $schTask = (Get-ScheduledTask | Where-Object taskname -like "*d2g*user*").taskname
     Start-ScheduledTask -TaskName $schTask
     Write-Host "Scheduled Task $schTask has been started."
 }
