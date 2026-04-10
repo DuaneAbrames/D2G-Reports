@@ -90,6 +90,9 @@ foreach ($user in $users) {
 		} else {
 			$companyName = $hostnameCustomer
 			$subfolderName = ''
+			if ($user.DistinguishedName -match '^CN=.*?,OU=([^,]+),OU=customers,') {
+				$companyName = $Matches[1]
+			}
 			if ($user.DistinguishedName -match '^CN=.*?,OU=([^,]+),(?:OU=[^,]+,)*OU=([^,]+),OU=customers,') {
 				$subfolderName = $Matches[1]
 				$companyName = $Matches[2]
