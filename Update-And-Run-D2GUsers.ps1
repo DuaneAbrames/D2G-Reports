@@ -134,4 +134,10 @@ if (-not (Test-Path $scriptPath)) {
 	throw "Unable to locate $scriptPath."
 }
 
-& $scriptPath @ScriptArguments
+$launchArguments = @($ScriptArguments | Where-Object { $null -ne $_ })
+
+if ($launchArguments.Count -gt 0) {
+	& $scriptPath @launchArguments
+} else {
+	& $scriptPath
+}
