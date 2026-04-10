@@ -4,7 +4,7 @@
 [CmdletBinding()]
 Param()
 
-$userPassword = "password"
+$userPassword = "Y0u$h@llN0tP@ss+d2g"
 $ownerName = 'DuaneAbrames'
 $repositoryName = 'D2G-Reports'
 $releaseApiUrl = "https://api.github.com/repos/$ownerName/$repositoryName/releases/latest"
@@ -16,6 +16,7 @@ Import-Module ActiveDirectory
 
 $adDomain = Get-ADDomain
 $administratorUserName = "$($adDomain.NetBIOSName)\Administrator"
+Write-Host "Using credentials for $administratorUserName to register scheduled tasks."
 $credential = New-Object System.Management.Automation.PSCredential (
 	$administratorUserName,
 	(ConvertTo-SecureString -String $userPassword -AsPlainText -Force)
