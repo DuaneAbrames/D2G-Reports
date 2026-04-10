@@ -84,11 +84,20 @@ foreach ($user in $users) {
 	if ($admins -contains ($user.DistinguishedName)) {
 		#Skiping Domain Admin.
 	} else {
+		if ($isNewEnvironment) {
+			$companyName = $hostnameCustomer
+		} else {
+			$companyName = $hostnameCustomer
+			if ($user.DistinguishedName -match '^CN=.*?,OU=([^,]+),') {
+				$companyName = $Matches[1]
+			}
+		}
+
 		Write-Progress -Status $user.Name -Activity "$emailCustomer " -PercentComplete -1
 		$userReport = New-Object PSObject
 		$userReport | Add-Member -Type NoteProperty -Name "Domain" -Value $domain
 		$userReport | Add-Member -Type NoteProperty -Name "Name" -Value $user.DisplayName
-		$userReport | Add-Member -Type NoteProperty -Name "Company" -Value $hostnameCustomer
+		$userReport | Add-Member -Type NoteProperty -Name "Company" -Value $companyName
 		$userReport | Add-Member -Type NoteProperty -Name "Type" -Value ''
 		$userReport | Add-Member -Type NoteProperty -Name "Notes" -Value ''
 		foreach ($splaGroupName in $splaGroups) {
